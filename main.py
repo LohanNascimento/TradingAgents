@@ -47,16 +47,20 @@ def print_agent_performance(system):
 
 async def main():
     system = TradingAgentsSystem(model_name="llama3.2")
-    symbols = ['AAPL', 'GOOGL', 'MSFT', 'TSLA', 'AMZN']
+    symbols = ['ETH-USD', 'BTC-USD', 'ADA-USD', 'SOL-USD', 'MATIC-USD']
     print("=== SISTEMA DE TRADING MULTIAGENTE ===")
     print(f"Modelo LLM: {system.llm.model_name}")
     print(f"Agentes inicializados: {len(system.all_agents)}")
+    print(f"Ollama GPU enabled: {getattr(system.llm, 'gpu_enabled', 'Indisponível')}")
     print()
     try:
         session_results = await system.run_trading_session(symbols[:2])
         print_session_results(session_results)
         print_portfolio_performance(system)
         print_agent_performance(system)
+        if hasattr(system.llm, 'response_times') and system.llm.response_times:
+            avg_time = sum(system.llm.response_times) / len(system.llm.response_times)
+            print(f"Tempo médio de resposta do LLM: {avg_time:.2f} segundos")
     except Exception as e:
         print(f"Erro: {e}")
 

@@ -48,5 +48,5 @@ class RiskManager(BaseAgent):
             recommendation=risk_analysis,
             timestamp=datetime.now()
         )
-        self.db.save_risk_assessment(assessment)
+        await self.db.save_risk_assessment(assessment)
         return assessment 

@@ -7,3 +7,5 @@ ollama>=0.1.0
 aiofiles>=23.0.0
 python-dotenv>=1.0.0
 enum34
+aiosqlite
+redis>=5.0.0

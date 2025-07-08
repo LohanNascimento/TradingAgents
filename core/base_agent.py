@@ -24,5 +24,5 @@ class BaseAgent:
         """
         
         response = await self.llm.generate_response(prompt)
-        self.db.save_discussion(session_id, self.name, response)
+        await self.db.save_discussion(session_id, self.name, response)
         return response 

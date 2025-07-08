@@ -4,7 +4,7 @@ from datetime import datetime
 from core.enums import DecisionType
 from core.data_models import TradingDecision
 from data.llm_interface import LLMInterface
-from data.database import DatabaseManager
+from data.database import AsyncDatabaseManager
 from data.market_data import MarketDataProvider
 from services.exchange import SimulatedExchange
 from agents.analysts import FundamentalAnalyst, SentimentAnalyst, NewsAnalyst, TechnicalAnalyst
@@ -15,13 +15,14 @@ from agents.portfolio_manager import PortfolioManager
 import asyncio
 from dataclasses import asdict
 import logging
+from utils.helpers import batcher
 
 logger = logging.getLogger(__name__)
 
 class TradingAgentsSystem:
     def __init__(self, model_name: str = "llama3.2"):
         self.llm = LLMInterface(model_name)
-        self.db = DatabaseManager()
+        self.db = AsyncDatabaseManager()
         self.market_data_provider = MarketDataProvider()
         self.exchange = SimulatedExchange()
         self.fundamental_analyst = FundamentalAnalyst(self.llm, self.db)
@@ -38,6 +39,12 @@ class TradingAgentsSystem:
             self.technical_analyst, self.bullish_researcher, self.bearish_researcher,
             self.trading_agent, self.risk_manager, self.portfolio_manager
         ]
+
+    async def connect_db(self):
+        await self.db.connect()
+
+    async def close_db(self):
+        await self.db.close()
 
     async def conduct_team_discussion(self, session_id: str, topic: str, context: str, rounds: int = 2):
         discussion_messages = []
@@ -121,7 +128,8 @@ class TradingAgentsSystem:
             'timestamp': datetime.now()
         }
 
-    async def run_trading_session(self, symbols: list, session_duration: int = 3600):
+    async def run_trading_session(self, symbols: list, session_duration: int = 3600, max_parallel: int = 4, batch_size: int = 4):
+        await self.connect_db()
         logger.info(f"Iniciando sessão de trading para {len(symbols)} símbolos")
         session_results = {
             'session_id': f"session_{int(time.time())}",
@@ -130,16 +138,21 @@ class TradingAgentsSystem:
             'results': {},
             'summary': {}
         }
-        for symbol in symbols:
-            try:
-                result = await self.analyze_symbol(symbol)
-                session_results['results'][symbol] = result
-                logger.info(f"Análise de {symbol} concluída - "
-                           f"Decisão: {result['trading_decision']['action']}, "
-                           f"Aprovado: {result['approval']}")
-            except Exception as e:
-                logger.error(f"Erro ao analisar {symbol}: {e}")
-                session_results['results'][symbol] = {'error': str(e)}
+        for batch in batcher(symbols, batch_size):
+            sem = asyncio.Semaphore(max_parallel)
+            async def analyze_with_limit(symbol):
+                async with sem:
+                    try:
+                        result = await self.analyze_symbol(symbol)
+                        session_results['results'][symbol] = result
+                        logger.info(f"Análise de {symbol} concluída - "
+                                    f"Decisão: {result['trading_decision']['action']}, "
+                                    f"Aprovado: {result['approval']}")
+                    except Exception as e:
+                        logger.error(f"Erro ao analisar {symbol}: {e}")
+                        session_results['results'][symbol] = {'error': str(e)}
+            await asyncio.gather(*(analyze_with_limit(symbol) for symbol in batch))
+
         session_results['end_time'] = datetime.now()
         session_results['duration'] = (
             session_results['end_time'] - session_results['start_time']
@@ -157,6 +170,7 @@ class TradingAgentsSystem:
         }
         logger.info(f"Sessão concluída: {total_analyses} análises, "
                    f"{approved_trades} aprovações, {executed_trades} execuções")
+        await self.close_db()
         return session_results
 
     def get_portfolio_performance(self):

@@ -59,5 +59,5 @@ class TradingAgent(BaseAgent):
             risk_level=RiskLevel.MEDIUM,
             timestamp=datetime.now()
         )
-        self.db.save_decision(decision, "TradingAgent")
+        await self.db.save_decision(decision, "TradingAgent")
         return decision 
