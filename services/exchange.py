@@ -2,6 +2,7 @@
 from datetime import datetime
 import random
 import logging
+from data.market_data import market_data_provider
 
 logger = logging.getLogger(__name__)
 
@@ -12,7 +13,9 @@ class SimulatedExchange:
     
     def submit_order(self, decision):
         order_id = f"ORD_{len(self.orders) + 1:06d}"
-        execution_price = decision.price * random.uniform(0.995, 1.005)
+        # Busca preço real de mercado no momento da execução
+        market_data = market_data_provider.get_market_data(decision.symbol)
+        execution_price = market_data.price if market_data else decision.price
         executed_trade = {
             'order_id': order_id,
             'symbol': decision.symbol,

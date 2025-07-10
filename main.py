@@ -45,9 +45,37 @@ def print_agent_performance(system):
         print(f"  Recomendações: {stats['recommendations']}")
         print()
 
+def print_discussion_messages(session_results):
+    print("=== DISCUSSÃO ENTRE AGENTES ===")
+    for symbol, result in session_results['results'].items():
+        print(f"\nSímbolo: {symbol}")
+        messages = result.get('discussion_messages', [])
+        if not messages:
+            print("  Nenhuma mensagem de discussão.")
+            continue
+        for i, msg in enumerate(messages, 1):
+            print(f"  [Discussão {i}] {msg}")
+
+def print_agent_analyses(session_results):
+    print("=== ANÁLISES INDIVIDUAIS DOS AGENTES ===")
+    for symbol, result in session_results['results'].items():
+        print(f"\nSímbolo: {symbol}")
+        analyses = result.get('analyses', [])
+        if not analyses:
+            print("  Nenhuma análise individual.")
+        for analysis in analyses:
+            agent = analysis.get('agent', 'Agente')
+            resumo = analysis.get('analysis', '').strip().replace('\n', ' ')
+            print(f"  [Análise] {agent}: {resumo}")
+        research = result.get('research', [])
+        for pesquisa in research:
+            agent = pesquisa.get('agent', 'Pesquisador')
+            resumo = pesquisa.get('research', '').strip().replace('\n', ' ')
+            print(f"  [Pesquisa Crítica] {agent}: {resumo}")
+
 async def main():
     system = TradingAgentsSystem(model_name="llama3.2")
-    symbols = ['ETH-USD', 'BTC-USD', 'ADA-USD', 'SOL-USD', 'MATIC-USD']
+    symbols = ['EURUSD=X', 'GPBUSD=X', 'ADA-USD', 'SOL-USD', 'MATIC-USD']
     print("=== SISTEMA DE TRADING MULTIAGENTE ===")
     print(f"Modelo LLM: {system.llm.model_name}")
     print(f"Agentes inicializados: {len(system.all_agents)}")
@@ -58,6 +86,8 @@ async def main():
         print_session_results(session_results)
         print_portfolio_performance(system)
         print_agent_performance(system)
+        print_agent_analyses(session_results)
+        print_discussion_messages(session_results)
         if hasattr(system.llm, 'response_times') and system.llm.response_times:
             avg_time = sum(system.llm.response_times) / len(system.llm.response_times)
             print(f"Tempo médio de resposta do LLM: {avg_time:.2f} segundos")

@@ -17,7 +17,7 @@ class TradingAgent(BaseAgent):
         - Execução de ordens
         """
     
-    async def make_trading_decision(self, symbol: str, all_analyses):
+    async def make_trading_decision(self, symbol: str, all_analyses, market_data=None):
         analysis_summary = "\n".join([
             f"{a['agent']}: Recomendação {a.get('recommendation', 'N/A').value if hasattr(a.get('recommendation'), 'value') else a.get('recommendation', 'N/A')}, "
             f"Confiança: {a.get('confidence', 0):.1f}%"
@@ -49,11 +49,13 @@ class TradingAgent(BaseAgent):
         else:
             final_action = DecisionType.HOLD
         avg_confidence = sum(a.get('confidence', 0) for a in all_analyses) / len(all_analyses)
+        # Usa preço real de mercado se fornecido
+        price = market_data.price if market_data is not None else random.uniform(45, 55)
         decision = TradingDecision(
             symbol=symbol,
             action=final_action,
             quantity=random.randint(100, 1000),
-            price=random.uniform(45, 55),
+            price=price,
             confidence=avg_confidence,
             reasoning=decision_analysis,
             risk_level=RiskLevel.MEDIUM,

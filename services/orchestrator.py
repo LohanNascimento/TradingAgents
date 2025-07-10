@@ -5,7 +5,7 @@ from core.enums import DecisionType
 from core.data_models import TradingDecision
 from data.llm_interface import LLMInterface
 from data.database import AsyncDatabaseManager
-from data.market_data import MarketDataProvider
+from data.market_data import market_data_provider
 from services.exchange import SimulatedExchange
 from agents.analysts import FundamentalAnalyst, SentimentAnalyst, NewsAnalyst, TechnicalAnalyst
 from agents.researchers import Researcher
@@ -23,7 +23,7 @@ class TradingAgentsSystem:
     def __init__(self, model_name: str = "llama3.2"):
         self.llm = LLMInterface(model_name)
         self.db = AsyncDatabaseManager()
-        self.market_data_provider = MarketDataProvider()
+        self.market_data_provider = market_data_provider
         self.exchange = SimulatedExchange()
         self.fundamental_analyst = FundamentalAnalyst(self.llm, self.db)
         self.sentiment_analyst = SentimentAnalyst(self.llm, self.db)
@@ -102,7 +102,7 @@ class TradingAgentsSystem:
         )
         all_analyses = analyses + research_results
         trading_decision = await self.trading_agent.make_trading_decision(
-            symbol, all_analyses
+            symbol, all_analyses, market_data
         )
         risk_assessment = await self.risk_manager.assess_risk(
             symbol, trading_decision, market_data
